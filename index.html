@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#081a2d"><link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css"><title>Albert — Field to Proposal</title>
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="review.css"><title>Albert — Field to Proposal</title>
 </head>
 <body>
 <header><div><b>ALBERT</b><small>From Jobsite to Proposal</small></div><button class="avatar" aria-label="Settings">CL</button></header>
@@ -24,6 +24,7 @@
   </section>
   <section id="projects" class="page"><p class="eyebrow">PROJECT TYPES</p><h2>Start a new proposal</h2><input id="projectSearch" class="search" placeholder="Search RTU, motor, controls…"><div id="categoryChips" class="chips"></div><div id="projectList" class="project-list"></div></section>
   <section id="jobs" class="page"><p class="eyebrow">JOBS</p><h2>Drafts and proposals</h2><div id="allJobs" class="job-list"></div></section>
+  <section id="review" class="page"><button class="back" data-action="jobs">‹ Jobs</button><p class="eyebrow">PROPOSAL REVIEW</p><h2 id="reviewTitle">Review proposal</h2><p id="reviewMeta" class="muted"></p><div id="reviewQuestions" class="analysis hidden"></div><label>Field notes<textarea id="reviewDescription" rows="6"></textarea></label><div class="voice-row"><button id="generateProposal" class="primary">Generate proposal</button><button id="deleteDraft" class="secondary danger">Delete draft</button></div><div id="proposalPanel" class="analysis hidden"><div class="section-title"><b>Albert's proposal</b><span id="proposalStatus" class="status">Draft</span></div><textarea id="proposalText" rows="18" aria-label="Generated proposal"></textarea><div class="voice-row"><button id="copyProposal" class="secondary">Copy</button><button id="approveProposal" class="primary">Approve</button></div><p class="muted fine-print">Review all equipment, pricing, warranty, exclusions, and legal terms before sending.</p></div></section>
   <section id="camera" class="page"><p class="eyebrow">JOB PHOTOS</p><h2>Capture the jobsite</h2><p class="muted">Start a proposal first and Albert will build the correct required-photo checklist.</p><label class="upload">📷<b>Take or choose photos</b><small>Camera and photo library supported</small><input id="photos" type="file" accept="image/*" multiple></label><div id="thumbs" class="thumbs"></div></section>
   <section id="teach" class="page"><p class="eyebrow">COMPANY KNOWLEDGE</p><h2>Teach Albert</h2><p class="muted">Upload approved material. Albert will suggest standards for your approval—never silently adopt them.</p><label class="upload">✦<b>Upload company knowledge</b><small>Approved proposals, terms, warranties, scopes, SOPs</small><input id="knowledge" type="file" accept=".pdf,.doc,.docx,.txt" multiple></label><div class="knowledge-grid"><div><b>0</b><small>Approved proposals</small></div><div><b>0%</b><small>Knowledge score</small></div><div><b>0</b><small>Pending approvals</small></div></div></section>
   <section id="settings" class="page"><p class="eyebrow">SETTINGS</p><h2>Company profile</h2><p class="muted">Brand, salesperson, proposal preferences, warranty, and legal terms will live here.</p></section>
