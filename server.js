@@ -161,7 +161,7 @@ app.post('/api/generate', async (req, res) => {
     let photoContext = '';
     if (photos.length>0) {
       try {
-        const pr = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:'Commercial HVAC field tech assistant for DTS. Extract technical data from job site photos. Return only valid JSON: {"extracted_fields":{},"observations":[],"flags":[]}',messages:[{role:'user',content:[...photos.slice(0,4).map(p=>({type:'image',source:{type:'base64',media_type:p.type||'image/jpeg',data:p.base64}})),{type:'text',text:'Identify equipment specs, pipe size/material, valve condition, and any scope risks. JSON only.'}]}]})});
+        const pr = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:'Commercial HVAC field tech assistant for DTS. Extract technical data from job site photos. Return only valid JSON: {"extracted_fields":{},"observations":[],"flags":[]}',messages:[{role:'user',content:[...photos.slice(0,4).map(p=>({type:'image',source:{type:'base64',media_type:p.type||'image/jpeg',data:p.base64}})),{type:'text',text:'Identify equipment specs, pipe size/material, valve condition, and any scope risks. JSON only.'}]}]})});
         const pd = await pr.json();
         const pt = pd.content?.find(b=>b.type==='text')?.text||'{}';
         const parsed = JSON.parse(pt.replace(/```json|```/g,'').trim());
@@ -198,7 +198,7 @@ ${searchContext}
 ${photoContext}
 
 No preamble. Output the document directly.`;
-    const aiResp = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2500,system:systemPrompt,messages:[{role:'user',content:userMessage}]})});
+    const aiResp = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:2500,system:systemPrompt,messages:[{role:'user',content:userMessage}]})});
     const aiData = await aiResp.json();
     const scope = aiData.content?.find(b=>b.type==='text')?.text||'';
     const pricingSuggestion = buildPricingSuggestion(template_id,answers,pricing,equipSearch);
@@ -257,7 +257,7 @@ app.post('/api/analyze-photos', async (req, res) => {
   if (!photos.length) return res.status(400).json({error:'no photos'});
   try {
     const imageContent = photos.slice(0,4).map(p=>({type:'image',source:{type:'base64',media_type:p.type||'image/jpeg',data:p.base64}}));
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:'You are a commercial HVAC field tech assistant for Diversified Thermal Services. Extract technical data from job site photos to pre-fill an intake form. Be precise — only report what you clearly see. Return ONLY valid JSON, no preamble or markdown.',messages:[{role:'user',content:[...imageContent,{type:'text',text:prompt||'Extract equipment specs, pipe sizes, valve conditions, and any scope risks. Return JSON: {"extracted_fields":{},"observations":[],"flags":[]}'}]}]})});
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:'You are a commercial HVAC field tech assistant for Diversified Thermal Services. Extract technical data from job site photos to pre-fill an intake form. Be precise — only report what you clearly see. Return ONLY valid JSON, no preamble or markdown.',messages:[{role:'user',content:[...imageContent,{type:'text',text:prompt||'Extract equipment specs, pipe sizes, valve conditions, and any scope risks. Return JSON: {"extracted_fields":{},"observations":[],"flags":[]}'}]}]})});
     const data = await resp.json();
     const raw = data.content?.find(b=>b.type==='text')?.text||'{}';
     const result = JSON.parse(raw.replace(/```json|```/g,'').trim());
