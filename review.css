@@ -1,0 +1,7 @@
+.job-button{width:100%;font:inherit;color:inherit;text-align:left}
+.job-button>span:first-child{min-width:0}
+.status.approved{color:#08734f;background:#dff8ed}
+.danger{border-color:#b42318;color:#b42318}
+.fine-print{font-size:11px;margin-bottom:0}
+#proposalText{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.55}
+button:disabled{opacity:.6;cursor:wait}
