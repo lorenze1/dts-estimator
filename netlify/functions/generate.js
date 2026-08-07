@@ -1,3 +1,50 @@
-const ALLOWED_ACTIONS=new Set(['intake','proposal']);
-exports.handler=async(event)=>{if(event.httpMethod!=='POST')return reply(405,{error:'Method not allowed'});if(!process.env.ANTHROPIC_API_KEY)return reply(503,{error:'AI service is not configured'});if((event.body||'').length>100000)return reply(413,{error:'Request too large'});try{const input=JSON.parse(event.body||'{}');if(!ALLOWED_ACTIONS.has(input.action))return reply(400,{error:'Invalid action'});const prompt=input.action==='intake'?`Turn these HVAC field notes into structured intake. Return JSON only with keys projectType, summary, extractedFields, missingQuestions. Never guess equipment identifiers. Customer: ${clean(input.customer,200)}\nNotes: ${clean(input.description,6000)}`:`Write a concise, action-first, field-sequenced HVAC proposal. Flag assumptions. Data: ${clean(JSON.stringify(input),10000)}`;const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:process.env.ANTHROPIC_MODEL||'claude-sonnet-4-6',max_tokens:1800,system:'You are ALBERT, an HVAC field-intake and proposal assistant. Be concise and technical. Do not invent model, serial, price, warranty, code, or legal facts.',messages:[{role:'user',content:prompt}]})});if(!r.ok)return reply(502,{error:'AI provider request failed'});const data=await r.json(),text=data.content?.find(x=>x.type==='text')?.text||'';if(input.action==='intake'){try{return reply(200,JSON.parse(text.replace(/```json|```/g,'').trim()))}catch{return reply(200,{summary:text,missingQuestions:[]})}}return reply(200,{proposal:text})}catch(e){return reply(400,{error:'Invalid request'})}};
-function clean(v,n){return String(v||'').replace(/[<>]/g,'').slice(0,n)}function reply(statusCode,body){return{statusCode,headers:{'content-type':'application/json','cache-control':'no-store','access-control-allow-origin':'*'},body:JSON.stringify(body)}}
+const ALLOWED_ACTIONS=new Set(['intake','proposal','knowledge']);
+const MAX_BODY=5_500_000;
+
+exports.handler=async event=>{
+  if(event.httpMethod!=='POST')return reply(405,{error:'Method not allowed'});
+  if(!process.env.ANTHROPIC_API_KEY)return reply(503,{error:'AI service is not configured'});
+  if((event.body||'').length>MAX_BODY)return reply(413,{error:'File is too large. Use a PDF or text file under 4 MB.'});
+  try{
+    const input=JSON.parse(event.body||'{}');
+    if(!ALLOWED_ACTIONS.has(input.action))return reply(400,{error:'Invalid action'});
+    const content=buildContent(input);
+    if(content.error)return reply(400,{error:content.error});
+    const response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:process.env.ANTHROPIC_MODEL||'claude-sonnet-4-6',
+        max_tokens:input.action==='knowledge'?1000:1800,
+        system:input.action==='knowledge'
+          ?'You are ALBERT, an HVAC proposal standards analyst. Extract only standards explicitly supported by the approved source. Never invent pricing, warranty, legal, equipment, or code facts.'
+          :'You are ALBERT, an HVAC field-intake and proposal assistant. Be concise and technical. Do not invent model, serial, price, warranty, code, or legal facts.',
+        messages:[{role:'user',content:content.value}]
+      })
+    });
+    if(!response.ok)return reply(502,{error:'AI provider request failed'});
+    const data=await response.json();
+    const text=data.content?.find(item=>item.type==='text')?.text||'';
+    if(input.action==='proposal')return reply(200,{proposal:text});
+    const parsed=parseJSON(text);
+    if(input.action==='intake')return reply(200,parsed||{summary:text,missingQuestions:[]});
+    return reply(200,{knowledge:parsed||{summary:text,standards:[]}});
+  }catch(error){return reply(400,{error:'Invalid request'})}
+};
+
+function buildContent(input){
+  if(input.action==='intake')return{value:`Turn these HVAC field notes into structured intake. Return JSON only with keys projectType, summary, extractedFields, missingQuestions. Never guess equipment identifiers. Customer: ${clean(input.customer,200)}\nNotes: ${clean(input.description,6000)}`};
+  if(input.action==='proposal')return{value:`Write a concise, action-first, field-sequenced HVAC proposal. Flag assumptions. Data: ${clean(JSON.stringify(input),10000)}`};
+  const file=input.file||{};
+  if(!file.base64||!file.type)return{error:'No readable file was received'};
+  const instruction='Analyze this approved company material. Return JSON only with keys summary, standards, warrantyTerms, exclusions. standards, warrantyTerms, and exclusions must be arrays of concise strings. Do not infer anything not stated in the source.';
+  if(file.type==='application/pdf')return{value:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}},{type:'text',text:instruction}]};
+  if(file.type==='text/plain'){
+    const text=Buffer.from(file.base64,'base64').toString('utf8').slice(0,100000);
+    return{value:`${instruction}\n\nApproved source: ${clean(text,100000)}`};
+  }
+  return{error:'Use a PDF or plain text file. Convert Word documents to PDF first.'};
+}
+function parseJSON(value){try{return JSON.parse(value.replace(/```json|```/g,'').trim())}catch{return null}}
+function clean(value,length){return String(value||'').replace(/[<>]/g,'').slice(0,length)}
+function reply(statusCode,body){return{statusCode,headers:{'content-type':'application/json','cache-control':'no-store','access-control-allow-origin':'*'},body:JSON.stringify(body)}}
