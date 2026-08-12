@@ -4,7 +4,7 @@ const MAX_BODY=5_500_000;
 exports.handler=async event=>{
   if(event.httpMethod!=='POST')return reply(405,{error:'Method not allowed'});
   if(!process.env.ANTHROPIC_API_KEY)return reply(503,{error:'AI service is not configured'});
-  if((event.body||'').length>MAX_BODY)return reply(413,{error:'File is too large. Use a PDF or text file under 4 MB.'});
+  if((event.body||'').length>MAX_BODY)return reply(413,{error:'File is too large. Use a PDF, text, or image file under 4 MB.'});
   try{
     const input=JSON.parse(event.body||'{}');
     if(!ALLOWED_ACTIONS.has(input.action))return reply(400,{error:'Invalid action'});
@@ -43,7 +43,8 @@ function buildContent(input){
     const text=Buffer.from(file.base64,'base64').toString('utf8').slice(0,100000);
     return{value:`${instruction}\n\nApproved source: ${clean(text,100000)}`};
   }
-  return{error:'Use a PDF or plain text file. Convert Word documents to PDF first.'};
+  if(['image/jpeg','image/png','image/webp','image/gif'].includes(file.type))return{value:[{type:'image',source:{type:'base64',media_type:file.type,data:file.base64}},{type:'text',text:`${instruction} Read all legible proposal text in the image. Treat this as an approved example, but do not copy customer names, addresses, dates, prices, equipment identifiers, or other job-specific facts into reusable standards.`}]};
+  return{error:'Use a PDF, plain text, or image file. Convert Word documents to PDF first.'};
 }
 function parseJSON(value){try{return JSON.parse(value.replace(/```json|```/g,'').trim())}catch{return null}}
 function clean(value,length){return String(value||'').replace(/[<>]/g,'').slice(0,length)}
