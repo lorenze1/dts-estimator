@@ -15,8 +15,8 @@ exports.handler=async event=>{
       headers:{'content-type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
       signal:AbortSignal.timeout(24000),
       body:JSON.stringify({
-        model:process.env.ANTHROPIC_MODEL||'claude-3-5-haiku-20241022',
-        max_tokens:input.action==='knowledge'?800:input.action==='proposal'?1200:600,
+        model:process.env.ANTHROPIC_MODEL||'claude-sonnet-4-6',
+        max_tokens:input.action==='knowledge'?700:input.action==='proposal'?800:500,
         system:input.action==='knowledge'
           ?'You are ALBERT, an HVAC proposal standards analyst. Extract only standards explicitly supported by the approved source. Never invent pricing, warranty, legal, equipment, or code facts.'
           :'You are ALBERT, an HVAC field-intake and proposal assistant. Be concise and technical. Do not invent model, serial, price, warranty, code, or legal facts.',
