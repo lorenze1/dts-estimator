@@ -59,7 +59,9 @@ const cats=['All',...new Set(PROJECTS.map(x=>x[0]))];$('#categoryChips').innerHT
 $('#voiceBtn').onclick=toggleVoice;
 $('#photoJob').onchange=event=>{photoJobId=event.target.value;localStorage.setItem('albert.photoJob',photoJobId);renderPhotos()};
 $('#openPhotoJob').onclick=()=>{if(photoJobId)openJob(photoJobId);else toast('Choose a saved job first')};
-$('#photos').onchange=async event=>{const files=[...event.target.files];if(files.length)await savePhotos(files);event.target.value=''};
+async function handlePhotoSelection(event){const files=[...event.target.files];if(files.length)await savePhotos(files);event.target.value=''}
+$('#takePhoto').onchange=handlePhotoSelection;
+$('#choosePhotos').onchange=handlePhotoSelection;
 $('#knowledge').onchange=importKnowledge;
 $('#clearKnowledge').onclick=clearKnowledge;
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;$('#installApp').classList.remove('hidden')});$('#installApp').onclick=async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('#installApp').classList.add('hidden')};
