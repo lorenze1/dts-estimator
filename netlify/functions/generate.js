@@ -42,7 +42,8 @@ function buildContent(input){
   if(input.action==='proposal')return{value:`Write a concise, action-first, field-sequenced HVAC proposal. Flag assumptions. Data: ${clean(JSON.stringify(input),10000)}`};
   const file=input.file||{};
   if(!file.base64||!file.type)return{error:'No readable file was received'};
-  const instruction='Analyze this approved company material. Return JSON only with keys summary, standards, warrantyTerms, exclusions. standards, warrantyTerms, and exclusions must be arrays of concise strings. Do not infer anything not stated in the source.';
+  const category=clean(input.category||'Other',60);
+  const instruction=`Analyze this approved company material classified as ${category}. Return JSON only with keys summary, standards, warrantyTerms, exclusions. standards, warrantyTerms, and exclusions must be arrays of concise strings. Extract reusable company standards appropriate to that category. Do not infer anything not stated in the source and do not retain filenames, customer details, addresses, dates, prices, or equipment identifiers.`;
   if(file.type==='application/pdf')return{value:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}},{type:'text',text:instruction}]};
   if(file.type==='text/plain'){
     const text=Buffer.from(file.base64,'base64').toString('utf8').slice(0,100000);
