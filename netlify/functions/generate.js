@@ -43,13 +43,13 @@ function buildContent(input){
   const file=input.file||{};
   if(!file.base64||!file.type)return{error:'No readable file was received'};
   const category=clean(input.category||'Other',60);
-  const instruction=`Analyze this approved company material classified as ${category}. Return JSON only with keys summary, standards, warrantyTerms, exclusions. standards, warrantyTerms, and exclusions must be arrays of concise strings. Extract reusable company standards appropriate to that category. Do not infer anything not stated in the source and do not retain filenames, customer details, addresses, dates, prices, or equipment identifiers.`;
+  const instruction=`Analyze this approved company material classified as ${category}. Return JSON only with keys summary, standards, warrantyTerms, exclusions, confidence, needsReview, reviewReason. standards, warrantyTerms, and exclusions must be arrays of concise strings. confidence must be a number from 0 to 1 reflecting text readability and extraction certainty. Set needsReview true and explain why when text is unreadable, ambiguous, incomplete, or confidence is below 0.8. Extract reusable company standards appropriate to that category. Do not infer anything not stated in the source and do not retain filenames, customer details, addresses, dates, prices, or equipment identifiers.`;
   if(file.type==='application/pdf')return{value:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}},{type:'text',text:instruction}]};
   if(file.type==='text/plain'){
     const text=Buffer.from(file.base64,'base64').toString('utf8').slice(0,100000);
     return{value:`${instruction}\n\nApproved source: ${clean(text,100000)}`};
   }
-  if(['image/jpeg','image/png','image/webp','image/gif'].includes(file.type))return{value:[{type:'image',source:{type:'base64',media_type:file.type,data:file.base64}},{type:'text',text:`${instruction} Read all legible proposal text in the image. Treat this as an approved example, but do not copy customer names, addresses, dates, prices, equipment identifiers, or other job-specific facts into reusable standards.`}]};
+  if(['image/jpeg','image/png','image/webp','image/gif'].includes(file.type))return{value:[{type:'image',source:{type:'base64',media_type:file.type,data:file.base64}},{type:'text',text:`${instruction} Read only clearly legible proposal text in the image. Never guess obscured or unreadable words. Treat this as an approved example, but do not copy customer names, addresses, dates, prices, equipment identifiers, or other job-specific facts into reusable standards.`}]};
   return{error:'Use a PDF, plain text, or image file. Convert Word documents to PDF first.'};
 }
 function parseJSON(value){try{return JSON.parse(value.replace(/```json|```/g,'').trim())}catch{return null}}

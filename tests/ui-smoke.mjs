@@ -15,7 +15,8 @@ for(const viewport of [{name:'mobile',width:390,height:844},{name:'desktop',widt
     if(body.action==='intake')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projectType:'RTU Replacement',summary:'Replace rooftop unit',extractedFields:{equipment:'RTU'},missingQuestions:['What is the electrical service?']})});
     if(body.action==='proposal')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({proposal:'Scope of Work\nReplace rooftop unit.\nAssumption: verify electrical service.'})});
     knowledgeCalls++;
-    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({knowledge:{standards:['Use approved startup checklist'],warrantyTerms:[],exclusions:[]}})});
+    if(body.file?.type?.startsWith('image/'))return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({knowledge:{standards:[],warrantyTerms:[],exclusions:[],confidence:.42,needsReview:true,reviewReason:'Image text is unreadable'}})});
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({knowledge:{standards:['Use approved startup checklist'],warrantyTerms:[],exclusions:[],confidence:.98,needsReview:false,reviewReason:''}})});
   });
   await page.goto('http://127.0.0.1:4173',{waitUntil:'networkidle'});
   assert.equal(await page.locator('nav button').count(),4,`${viewport.name}: four bottom navigation items`);
@@ -37,6 +38,8 @@ for(const viewport of [{name:'mobile',width:390,height:844},{name:'desktop',widt
   await page.locator('nav [data-page="settings"]').click();
   assert.equal(await page.locator('#knowledge').getAttribute('multiple'),'',`${viewport.name}: Teach Albert accepts multiple files`);
   assert.equal(await page.locator('#knowledgeFolder').getAttribute('webkitdirectory'),'',`${viewport.name}: folder picker is available where supported`);
+  assert.equal(await page.locator('#knowledgeImages').getAttribute('multiple'),'',`${viewport.name}: proposal photo library supports multiple images`);
+  assert.equal(await page.locator('#knowledgeCamera').getAttribute('capture'),'environment',`${viewport.name}: proposal camera path is available`);
   await page.locator('#openTeachAlbert').click();
   await page.locator('#knowledgeCategory').selectOption({label:'SOP'});
   await page.locator('#knowledge').setInputFiles([
@@ -55,8 +58,15 @@ for(const viewport of [{name:'mobile',width:390,height:844},{name:'desktop',widt
   await page.waitForFunction(()=>document.querySelector('#knowledgeCount')?.textContent==='2');
   assert.equal(knowledgeCalls,2,`${viewport.name}: explicit confirmation processes the staged batch`);
   const trained=await page.evaluate(()=>JSON.parse(localStorage.getItem('albert.knowledge')));
-  assert.ok(trained.every(item=>item.category==='SOP'&&item.sourceCount===1&&item.version===1&&item.approvedAt&&item.reusableStandards.length),`${viewport.name}: approved local knowledge records are structured`);
+  assert.ok(trained.every(item=>item.category==='SOP'&&item.sourceCount===1&&item.version===1&&item.approvedAt&&item.reusableStandards.length&&!('name'in item)),`${viewport.name}: approved local knowledge records are structured without filenames`);
   assert.equal(await page.locator('.queue-row').count(),0,`${viewport.name}: raw queued sources are removed after success`);
+  await page.locator('#knowledgeImages').setInputFiles({name:'customer-proposal.jpg',mimeType:'image/jpeg',buffer:Buffer.from('not-a-readable-image')});
+  await page.waitForFunction(()=>document.querySelectorAll('.queue-row').length===1);
+  assert.doesNotMatch(await page.locator('.queue-row').innerText(),/customer-proposal/i,`${viewport.name}: staged sources do not persist sensitive filenames`);
+  await page.locator('#teachQueued').click();
+  await page.waitForFunction(()=>document.querySelector('.queue-status')?.textContent.includes('unreadable'));
+  assert.equal(await page.locator('#knowledgeCount').textContent(),'2',`${viewport.name}: low-confidence image is not learned`);
+  assert.equal(await page.locator('.queue-row').count(),1,`${viewport.name}: low-confidence image remains flagged for review`);
   assert.deepEqual(browserErrors,[],`${viewport.name}: no browser console errors`);
   await context.close();
 }
