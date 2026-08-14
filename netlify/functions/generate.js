@@ -28,7 +28,11 @@ exports.handler=async event=>{
     const text=data.content?.find(item=>item.type==='text')?.text||'';
     if(input.action==='proposal')return reply(200,{proposal:text});
     const parsed=parseJSON(text);
-    if(input.action==='intake')return reply(200,parsed||{summary:text,missingQuestions:[]});
+    if(input.action==='intake'){
+      const intake=parsed||{summary:text,missingQuestions:[]};
+      intake.missingQuestions=Array.isArray(intake.missingQuestions)?intake.missingQuestions.slice(0,6):[];
+      return reply(200,intake);
+    }
     return reply(200,{knowledge:parsed||{summary:text,standards:[]}});
   }catch(error){if(error.name==='TimeoutError')return reply(504,{error:'Claude took too long. Try again.'});console.error('Generate function failed',error.name);return reply(400,{error:'Invalid request'})}
 };
