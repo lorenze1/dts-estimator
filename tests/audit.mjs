@@ -13,6 +13,7 @@ assert.match(fn,/process\.env\.ANTHROPIC_API_KEY/);
 assert.doesNotMatch(`${app}\n${index}\n${netlify}\n${manifest}\n${worker}`,/sk-ant-[A-Za-z0-9_-]+/);
 assert.match(fn,/https:\/\/api\.anthropic\.com\/v1\/messages/);
 assert.match(fn,/ask at most 6 essential missing questions/);
+assert.match(fn,/missingQuestions\.slice\(0,6\)/);
 assert.match(netlify,/functions = "netlify\/functions"/);
 assert.match(netlify,/Content-Security-Policy/);
 assert.equal(JSON.parse(manifest).display,'standalone');
