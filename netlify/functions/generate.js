@@ -16,7 +16,7 @@ exports.handler=async event=>{
       signal:AbortSignal.timeout(24000),
       body:JSON.stringify({
         model:process.env.ANTHROPIC_MODEL||'claude-sonnet-4-6',
-        max_tokens:input.action==='knowledge'?700:input.action==='proposal'?800:500,
+        max_tokens:input.action==='knowledge'?700:input.action==='proposal'?800:700,
         system:input.action==='knowledge'
           ?'You are ALBERT, an HVAC proposal standards analyst. Extract only standards explicitly supported by the approved source. Never invent pricing, warranty, legal, equipment, or code facts.'
           :'You are ALBERT, an HVAC field-intake and proposal assistant. Be concise and technical. Do not invent model, serial, price, warranty, code, or legal facts.',
@@ -34,7 +34,7 @@ exports.handler=async event=>{
 };
 
 function buildContent(input){
-  if(input.action==='intake')return{value:`Turn these HVAC field notes into structured intake. Return JSON only with keys projectType, summary, extractedFields, missingQuestions. Never guess equipment identifiers. Customer: ${clean(input.customer,200)}\nNotes: ${clean(input.description,6000)}`};
+  if(input.action==='intake')return{value:`Turn these HVAC field notes into concise structured intake. Return valid JSON only with keys projectType, summary, extractedFields, missingQuestions. Keep summary under 80 words, include only fields supported by the notes, and ask at most 6 essential missing questions. Never guess equipment identifiers. Customer: ${clean(input.customer,200)}\nNotes: ${clean(input.description,6000)}`};
   if(input.action==='proposal')return{value:`Write a concise, action-first, field-sequenced HVAC proposal. Flag assumptions. Data: ${clean(JSON.stringify(input),10000)}`};
   const file=input.file||{};
   if(!file.base64||!file.type)return{error:'No readable file was received'};
