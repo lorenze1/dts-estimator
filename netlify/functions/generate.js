@@ -1,4 +1,4 @@
-const ALLOWED_ACTIONS=new Set(['intake','proposal','knowledge']);
+const ALLOWED_ACTIONS=new Set(['intake','proposal','knowledge','emailReply']);
 const MAX_BODY=5_500_000;
 
 exports.handler=async event=>{
@@ -19,7 +19,9 @@ exports.handler=async event=>{
         max_tokens:input.action==='knowledge'?700:input.action==='proposal'?800:700,
         system:input.action==='knowledge'
           ?'You are ALBERT, an HVAC proposal standards analyst. Extract only standards explicitly supported by the approved source. Never invent pricing, warranty, legal, equipment, or code facts.'
-          :'You are ALBERT, an HVAC field-intake and proposal assistant. Be concise and technical. Do not invent model, serial, price, warranty, code, or legal facts.',
+          :input.action==='emailReply'
+            ?'You draft professional customer replies for Diversified Thermal Services. Be warm, concise, and helpful. Never promise scheduling, pricing, availability, diagnosis, warranty, or scope not explicitly provided. Ask only necessary next questions. Return only the email body.'
+            :'You are ALBERT, an HVAC field-intake and proposal assistant. Be concise and technical. Do not invent model, serial, price, warranty, code, or legal facts.',
         messages:[{role:'user',content:content.value}]
       })
     });
@@ -27,6 +29,7 @@ exports.handler=async event=>{
     const data=await response.json();
     const text=data.content?.find(item=>item.type==='text')?.text||'';
     if(input.action==='proposal')return reply(200,{proposal:text});
+    if(input.action==='emailReply')return reply(200,{reply:text});
     const parsed=parseJSON(text);
     if(input.action==='intake'){
       const intake=parsed||{summary:text,missingQuestions:[]};
@@ -39,7 +42,8 @@ exports.handler=async event=>{
 
 function buildContent(input){
   if(input.action==='intake')return{value:`Turn these HVAC field notes into concise structured intake. Return valid JSON only with keys projectType, summary, extractedFields, missingQuestions. Keep summary under 80 words, include only fields supported by the notes, and ask at most 6 essential missing questions. Never guess equipment identifiers. Customer: ${clean(input.customer,200)}\nNotes: ${clean(input.description,6000)}`};
-  if(input.action==='proposal')return{value:`Write a concise, action-first, field-sequenced HVAC proposal. Flag assumptions. Data: ${clean(JSON.stringify(input),10000)}`};
+  if(input.action==='proposal')return{value:`Write a concise, action-first, field-sequenced HVAC proposal. Flag assumptions. Approved examples guide tone and reusable phrasing only. Never copy prior customer prices, addresses, equipment, quantities, or dates. Data: ${clean(JSON.stringify(input),10000)}`};
+  if(input.action==='emailReply')return{value:`Draft a reply to this potential customer. Acknowledge the request, state that DTS can review it, and ask only for information needed for the next step. Do not quote a price or commit to a date.\nFrom: ${clean(input.from,300)}\nSubject: ${clean(input.subject,500)}\nEmail:\n${clean(input.body,12000)}\nDTS sender: ${clean(input.senderName,200)}`};
   const file=input.file||{};
   if(!file.base64||!file.type)return{error:'No readable file was received'};
   const category=clean(input.category||'Other',60);
